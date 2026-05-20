@@ -1,4 +1,5 @@
 from accounts.models import User
+from accounts.actions.verify_email import send_verification_email
 
 
 def register_user(email: str, username: str, password: str) -> User:
@@ -13,5 +14,7 @@ def register_user(email: str, username: str, password: str) -> User:
         username=username,
         password=password,
     )
+
+    send_verification_email(user)
 
     return user

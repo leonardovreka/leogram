@@ -11,3 +11,9 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def validate_email(self, value):
         return value.lower()
+
+class ConfirmEmailSerializer(serializers.Serializer):
+    token = serializers.UUIDField()
+
+class ResendVerificationSerializer(serializers.Serializer):
+    email = serializers.EmailField()
