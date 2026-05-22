@@ -17,3 +17,10 @@ class ConfirmEmailSerializer(serializers.Serializer):
 
 class ResendVerificationSerializer(serializers.Serializer):
     email = serializers.EmailField()
+
+class LoginSerializer(serializers.Serializer):
+    email_or_username = serializers.CharField()
+    password = serializers.CharField(write_only=True)
+
+class RefreshSerializer(serializers.Serializer):
+    refresh = serializers.CharField()

@@ -2,12 +2,16 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 
-from .serializers import RegisterSerializer, ConfirmEmailSerializer, ResendVerificationSerializer
+from .serializers import RegisterSerializer, ConfirmEmailSerializer, ResendVerificationSerializer, LoginSerializer
 from accounts.actions.register import register_user
 from accounts.actions.confirm_email import confirm_email
 from django_ratelimit.decorators import ratelimit
 from django.utils.decorators import method_decorator
 from accounts.actions.resend_verification import resend_verification_email
+from accounts.actions.login import login_user
+
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
 
 class RegisterView(APIView):
     def post(self, request):
@@ -58,3 +62,48 @@ class ResendVerificationView(APIView):
             {'message': 'If this email exists and is unverified, a new verification email has been sent.'},
             status=status.HTTP_200_OK
         )
+
+class LoginView(APIView):
+    def post(self, request):
+        serializer = LoginSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            tokens = login_user(
+                email_or_username=serializer.validated_data['email_or_username'],
+                password=serializer.validated_data['password'],
+            )
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(tokens, status=status.HTTP_200_OK)
+
+class TokenRefreshView(APIView):
+    def post(self, request):
+        refresh_token = request.data.get('refresh')
+
+        if not refresh_token:
+            return Response({'error': 'Refresh token is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            refresh = RefreshToken(refresh_token)
+            return Response({'access': str(refresh.access_token)}, status=status.HTTP_200_OK)
+        except TokenError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class LogoutView(APIView):
+    def post(self, request):
+        refresh_token = request.data.get('refresh')
+
+        if not refresh_token:
+            return Response({'error': 'Refresh token is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            refresh = RefreshToken(refresh_token)
+            refresh.blacklist()
+            return Response({'message': 'Successfully logged out'}, status=status.HTTP_200_OK)
+        except TokenError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
