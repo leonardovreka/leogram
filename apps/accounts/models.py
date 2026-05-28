@@ -60,6 +60,7 @@ class EmailVerificationToken(models.Model):
     def __str__(self):
         return f"Token for {self.user.email}"
 
+
 class PasswordResetToken(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='password_reset_tokens')
     token = models.UUIDField(default=uuid.uuid4, unique=True)
@@ -72,3 +73,20 @@ class PasswordResetToken(models.Model):
 
     def __str__(self):
         return f"Password reset token for {self.user.email}"
+
+
+class Follow(models.Model):
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'Pending'
+        ACCEPTED = 'accepted', 'Accepted'
+
+    follower = models.ForeignKey(User, on_delete=models.CASCADE, related_name='following')
+    followee = models.ForeignKey(User, on_delete=models.CASCADE, related_name='followers')
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('follower', 'followee')
+
+    def __str__(self):
+        return f"{self.follower.username} → {self.followee.username} ({self.status})"

@@ -17,10 +17,12 @@ from django.utils.decorators import method_decorator
 from accounts.actions.resend_verification import resend_verification_email
 from accounts.actions.login import login_user
 from accounts.actions.password_reset import request_password_reset, confirm_password_reset
+from accounts.models import User, Follow
+from accounts.actions.follows import follow_user, unfollow_user, accept_follow, reject_follow
 
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
-
+from rest_framework.permissions import IsAuthenticated
 
 class RegisterView(APIView):
     def post(self, request):
@@ -157,3 +159,100 @@ class PasswordResetConfirmView(APIView):
             {'message': 'Password reset successfully'},
             status=status.HTTP_200_OK
         )
+
+
+class FollowView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, username):
+        try:
+            followee = User.objects.get(username=username)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            follow = follow_user(follower=request.user, followee=followee)
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(
+            {'id': follow.id, 'status': follow.status},
+            status=status.HTTP_201_CREATED
+        )
+
+
+class UnfollowView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, username):
+        try:
+            followee = User.objects.get(username=username)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            unfollow_user(follower=request.user, followee=followee)
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({'message': 'Unfollowed successfully'}, status=status.HTTP_200_OK)
+
+
+class AcceptFollowView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            follow = accept_follow(follow_id=pk, user=request.user)
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({'id': follow.id, 'status': follow.status}, status=status.HTTP_200_OK)
+
+
+class RejectFollowView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            reject_follow(follow_id=pk, user=request.user)
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({'message': 'Follow request rejected'}, status=status.HTTP_200_OK)
+
+
+class FollowersListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, username):
+        try:
+            user = User.objects.get(username=username)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        followers = Follow.objects.filter(
+            followee=user,
+            status=Follow.Status.ACCEPTED
+        ).select_related('follower')
+
+        data = [{'id': f.follower.id, 'username': f.follower.username} for f in followers]
+        return Response(data, status=status.HTTP_200_OK)
+
+
+class FollowingListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, username):
+        try:
+            user = User.objects.get(username=username)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        following = Follow.objects.filter(
+            follower=user,
+            status=Follow.Status.ACCEPTED
+        ).select_related('followee')
+
+        data = [{'id': f.followee.id, 'username': f.followee.username} for f in following]
+        return Response(data, status=status.HTTP_200_OK)
