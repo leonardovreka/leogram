@@ -19,10 +19,23 @@ services:
     ports:
       - "6379:6379"
 
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+
   api:
     build: .
     command: >
       sh -c "uv run python manage.py makemigrations accounts &&
+             uv run python manage.py makemigrations posts &&
              uv run python manage.py migrate &&
              uv run python manage.py runserver 0.0.0.0:8000"
     volumes:
@@ -36,6 +49,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+      minio:
+        condition: service_started
 
 volumes:
   postgres_data:
+  minio_data:
