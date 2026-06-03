@@ -67,4 +67,4 @@ class PostDetailView(APIView):
             return Response({'error': 'You can only delete your own posts'}, status=status.HTTP_403_FORBIDDEN)
 
         post.delete()
-        return Response({'message': '
+        return Response({'message': 'Post deleted successfully'}, status=status.HTTP_200_OK)

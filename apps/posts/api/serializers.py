@@ -13,4 +13,4 @@ class PostSerializer(serializers.ModelSerializer):
 
 class CreatePostSerializer(serializers.Serializer):
     title = serializers.CharField(max_length=255)
-    image_file = serializers.ImageField()
+    image_file = serializers.FileField()
