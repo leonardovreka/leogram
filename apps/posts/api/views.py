@@ -71,7 +71,7 @@ class PostDetailView(APIView):
         post.delete()
         return Response({'message': 'Post deleted successfully'}, status=status.HTTP_200_OK)
 
-class AddCommentView(APIView):
+class CommentsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
@@ -90,10 +90,6 @@ class AddCommentView(APIView):
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(CommentSerializer(comment).data, status=status.HTTP_201_CREATED)
-
-
-class ListCommentsView(APIView):
-    permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
         try:
